@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asisten Matematika Pro</title>
+    <style>
+        :root {
+            --primary: #2d3748;
+            --secondary: #4a5568;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            background: #f7fafc;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .input-group {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        input, select {
+            padding: 0.8rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: #4299e1;
+            outline: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        button.secondary {
+            background: #e2e8f0;
+            color: var(--secondary);
+        }
+
+        button:hover {
+            filter: brightness(0.9);
+        }
+
+        .result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #ebf8ff;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+
+        .steps {
+            margin-top: 1rem;
+            color: var(--secondary);
+            line-height: 1.6;
+            font-size: 0.9em;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .history {
+            margin-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 1rem;
+        }
+
+        .history-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: var(--secondary);
+        }
+
+        .error {
+            color: #e53e3e;
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Asisten Matematika Pro</h2>
+        <div class="input-group">
+            <input type="text" id="num1" placeholder="Bilangan pertama" inputmode="decimal">
+            <select id="operation">
+                <option value="+">Penjumlahan (+)</option>
+                <option value="-">Pengurangan (-)</option>
+                <option value="×">Perkalian (×)</option>
+                <option value="÷">Pembagian (÷)</option>
+            </select>
+            <input type="text" id="num2" placeholder="Bilangan kedua" inputmode="decimal">
+            
+            <div class="button-group">
+                <button onclick="hitung()">Hitung</button>
+                <button class="secondary" onclick="clearInput()">Bersihkan Input</button>
+                <button class="secondary" onclick="clearHistory()">Bersihkan Riwayat</button>
+            </div>
+        </div>
+
+        <div class="result" id="resultContainer">
+            <div id="result">Silakan masukkan perhitungan...</div>
+            <div class="history" id="history"></div>
+        </div>
+    </div>
+
+    <script>
+        let calculationHistory = [];
+        
+        function parseNumber(num) {
+            return parseFloat(num.replace(/\./g, '').replace(',', '.'));
+        }
+
+        function formatNumber(num) {
+            return num.toLocaleString('id-ID', {maximumFractionDigits: 6});
+        }
+
+        function updateHistory() {
+            const historyContainer = document.getElementById('history');
+            historyContainer.innerHTML = calculationHistory.map((entry, index) => `
+                <div class="history-item">
+                    <strong>#${index + 1}</strong> [${entry.timestamp}] 
+                    ${entry.calculation} = ${entry.result}
+                </div>
+            `).join('');
+        }
+
+        function clearInput() {
+            document.getElementById('num1').value = '';
+            document.getElementById('num2').value = '';
+            document.getElementById('operation').selectedIndex = 0;
+            document.getElementById('result').innerHTML = 'Silakan masukkan perhitungan...';
+        }
+
+        function clearHistory() {
+            calculationHistory = [];
+            updateHistory();
+        }
+
+        function logCalculation(calculation, result, steps) {
+            const timestamp = new Date().toLocaleTimeString();
+            calculationHistory.unshift({
+                timestamp,
+                calculation,
+                result,
+                steps
+            });
+            
+            if(calculationHistory.length > 5) calculationHistory.pop();
+            updateHistory();
+        }
+
+        function hitung() {
+            const num1Input = document.getElementById('num1').value;
+            const num2Input = document.getElementById('num2').value;
+            const operation = document.getElementById('operation').value;
+            
+            const num1 = parseNumber(num1Input);
+            const num2 = parseNumber(num2Input);
+            
+            let result = '';
+            let steps = '';
+            let error = null;
+
+            if (!num1Input || !num2Input) {
+                error = '⚠️ Mohon lengkapi kedua bilangan!';
+            } else if (isNaN(num1) || isNaN(num2)) {
+                error = '⚠️ Format bilangan tidak valid!';
+            } else {
+                const formattedNum1 = formatNumber(num1);
+                const formattedNum2 = formatNumber(num2);
+                
+                switch(operation) {
+                    case '+':
+                        result = num1 + num2;
+                        steps = `Langkah Penjumlahan:
+1. Jumlahkan kedua bilangan
+2. ${formattedNum1} + ${formattedNum2}
+3. Hasil = ${formatNumber(result)}`;
+                        break;
+                        
+                    case '-':
+                        result = num1 - num2;
+                        steps = `Langkah Pengurangan:
+1. Kurangi bilangan pertama dengan kedua
+2. ${formattedNum1} - ${formattedNum2}
+3. Hasil = ${formatNumber(result)}`;
+                        break;
+                        
+                    case '×':
+                        result = num1 * num2;
+                        steps = `Langkah Perkalian:
+1. Kalikan kedua bilangan
+2. ${formattedNum1} × ${formattedNum2}
+3. Hasil = ${formatNumber(result)}`;
+                        break;
+                        
+                    case '÷':
+                        if(num2 === 0) {
+                            error = '⚠️ Tidak bisa melakukan pembagian dengan nol!';
+                        } else {
+                            result = num1 / num2;
+                            const exactResult = num1 % num2 === 0;
+                            steps = `Langkah Pembagian:
+1. Bagi bilangan pertama dengan kedua
+2. ${formattedNum1} ÷ ${formattedNum2}
+3. Hasil = ${formatNumber(exactResult ? result : result.toFixed(6))}`;
+                            
+                            if(!exactResult) {
+                                steps += `\n   (Hasil dibulatkan 6 angka desimal)`;
+                                result = result.toFixed(6);
+                            }
+                        }
+                        break;
+                }
+            }
+
+            const resultContainer = document.getElementById('result');
+            if(error) {
+                resultContainer.innerHTML = `<div class="error">${error}</div>`;
+            } else {
+                const calculationString = `${formatNumber(num1)} ${operation} ${formatNumber(num2)}`;
+                resultContainer.innerHTML = `
+                    <strong>${calculationString} = ${formatNumber(result)}</strong>
+                    <div class="steps">${steps}</div>
+                `;
+                logCalculation(calculationString, formatNumber(result), steps);
+            }
+        }
+
+        // Handle Enter key
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') hitung();
+            });
+        });
+    </script>
+</body>
+</html>
